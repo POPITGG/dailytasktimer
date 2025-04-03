@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Task Timer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Daily Task Timer</h1>
+        <input type="text" id="taskName" placeholder="Enter task name">
+        <input type="number" id="taskDuration" placeholder="Duration (minutes)" min="1">
+        <ul id="taskList"></ul>
+    </div>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #0a0f29;
+            color: white;
+        }
+        .container {
+            background: linear-gradient(135deg, #14213d, #1f4068);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            width: 350px;
+            text-align: center;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        .task {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .task span {
+            margin-bottom: 10px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+        }
+        .glow-button {
+            background: none;
+            border: 2px solid #00d9ff;
+            color: #00d9ff;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            width: 80px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .glow-button:hover {
+            background: #00d9ff;
+            color: #0a0f29;
+            box-shadow: 0 0 10px #00d9ff, 0 0 40px #00d9ff;
+        }
+    </style>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        const taskList = document.getElementById('taskList');
+
+        document.getElementById('taskDuration').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                addTask();
+            }
+        });
+
+        function addTask() {
+            const name = document.getElementById('taskName').value;
+            const duration = parseInt(document.getElementById('taskDuration').value) * 60;
+            if (!name || isNaN(duration)) return;
+
+            const task = {
+                name,
+                duration,
+                remaining: duration,
+                running: false,
+                interval: null
+            };
+            tasks.push(task);
+            updateTasks();
+
+            document.getElementById('taskName').value = '';
+            document.getElementById('taskDuration').value = '';
+        }
+
+        function updateTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.classList.add('task');
+                li.innerHTML = `
+                    <span>${task.name} - <span id="time-${index}">${formatTime(task.remaining)}</span></span>
+                    <div class="button-container">
+                        <button class="glow-button" onclick="startTimer(${index})">Start</button>
+                        <button class="glow-button" onclick="pauseTimer(${index})">Pause</button>
+                        <button class="glow-button" onclick="deleteTask(${index})">Delete</button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function startTimer(index) {
+            if (tasks[index].running) return;
+            tasks[index].running = true;
+            tasks[index].interval = setInterval(() => {
+                if (tasks[index].remaining > 0) {
+                    tasks[index].remaining--;
+                    document.getElementById(`time-${index}`).innerText = formatTime(tasks[index].remaining);
+                } else {
+                    clearInterval(tasks[index].interval);
+                    tasks[index].running = false;
+                }
+            }, 1000);
+        }
+
+        function pauseTimer(index) {
+            clearInterval(tasks[index].interval);
+            tasks[index].running = false;
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            updateTasks();
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function resetDailyCheck() {
+            if (localStorage.getItem('lastReset') !== new Date().toDateString()) {
+                tasks = [];
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                localStorage.setItem('lastReset', new Date().toDateString());
+            }
+        }
+
+        resetDailyCheck();
+        updateTasks();
+    </script>
+</body>
+</html>
